@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project data and generated artifacts
+data/raw/*
+data/processed/*
+outputs/checkpoints/*
+outputs/heatmaps/*
+outputs/metrics/*
+outputs/figures/*
+!**/.gitkeep
