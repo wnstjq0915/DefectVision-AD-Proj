@@ -225,3 +225,10 @@ outputs/heatmaps/*
 outputs/metrics/*
 outputs/figures/*
 !**/.gitkeep
+
+# DefectVision large local artifacts
+*.pt
+*.pth
+*.ckpt
+!docs/assets/results/
+!docs/assets/results/**

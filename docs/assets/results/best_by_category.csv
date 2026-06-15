@@ -1,0 +1,2 @@
+dataset,category,model,status,error,num_images,threshold,accuracy,precision,recall,f1,auroc,pixel_auroc,selection_score,config_path,checkpoint_path
+mvtec,bottle,patchcore,ok,,83,0.7873522639274596,0.9879518072289156,1.0,0.9841269841269841,0.9919999999999999,0.9984126984126984,0.9771925251700563,0.990458391380485,/content/drive/MyDrive/DefectVision-AD/artifacts/results/configs/mvtec/bottle/patchcore.yaml,/content/drive/MyDrive/DefectVision-AD/artifacts/checkpoints/mvtec/bottle/patchcore.pt
