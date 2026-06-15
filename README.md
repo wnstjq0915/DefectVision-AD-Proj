@@ -1,611 +1,585 @@
-# DefectVision-AD: PyTorch 기반 산업 제품 결함 이상탐지 프로젝트
+# DefectVision-AD 최종 보고서
 
 <p align="center">
   <img src="https://img.shields.io/badge/Project-Visual%20Anomaly%20Detection-blue" />
   <img src="https://img.shields.io/badge/Framework-PyTorch-red" />
-  <img src="https://img.shields.io/badge/Dataset-MVTec%20AD%20%7C%20VisA-green" />
+  <img src="https://img.shields.io/badge/Dataset-MVTec%20AD-green" />
   <img src="https://img.shields.io/badge/Task-Classification%20%2B%20Localization-purple" />
+  <img src="https://img.shields.io/badge/Demo-Streamlit-orange" />
 </p>
 
-> **정상 제품 이미지만 학습한 뒤, 제품 이미지에서 결함 여부와 결함 위치를 탐지하는 PyTorch 기반 산업 이미지 이상탐지 프로젝트입니다.**  
-> 본 프로젝트는 직접 영상/이미지를 촬영하지 않고도 공개 데이터셋을 활용해 영상처리, 딥러닝, 이상탐지, 시각화를 모두 경험하는 것을 목표로 합니다.
+> 정상 제품 이미지만 학습한 뒤, 제품 이미지가 정상인지 불량인지 판별하고 결함 의심 영역을 heatmap으로 시각화하는 PyTorch 기반 산업 이미지 이상탐지 프로젝트입니다.
+
+---
+
+## 제출 정보
+
+| 항목 | 내용 |
+|---|---|
+| 학교 | 인하공업전문대학 |
+| 학과 | 컴퓨터정보공학과(심화) |
+| 학년 | 1학년 |
+| 학번 | 202647025 |
+| 이름 | 김준섭 |
+| 프로젝트명 | DefectVision-AD |
+| GitHub | https://github.com/wnstjq0915/DefectVision-AD-Proj.git |
+| 최종 실험 데이터셋 | MVTec AD |
+| 최종 실험 category | bottle, cable, capsule, carpet, grid, hazelnut |
 
 ---
 
 ## 목차
 
-- [1. 프로젝트 개요](#1-프로젝트-개요)
-- [2. 주제 선정 이유](#2-주제-선정-이유)
-- [3. 프로젝트 목표](#3-프로젝트-목표)
-- [4. 기대효과](#4-기대효과)
-- [5. 자료조사 및 데이터셋 출처](#5-자료조사-및-데이터셋-출처)
-- [6. 문제 정의](#6-문제-정의)
-- [7. 예상 기술 스택](#7-예상-기술-스택)
-- [8. 시스템 구조](#8-시스템-구조)
-- [9. 핵심 기능](#9-핵심-기능)
-- [10. 모델링 전략](#10-모델링-전략)
-- [11. 데이터 전처리 계획](#11-데이터-전처리-계획)
-- [12. 평가 지표](#12-평가-지표)
-- [13. 예상 결과물](#13-예상-결과물)
-- [14. 예상 프로젝트 일정](#14-예상-프로젝트-일정)
-- [15. 예상 레포지토리 구조](#15-예상-레포지토리-구조)
-- [16. 리스크 및 대응 방안](#16-리스크-및-대응-방안)
-- [17. 참고자료](#17-참고자료)
+1. [문제 정의](#1-문제-정의)
+2. [데이터셋 설명](#2-데이터셋-설명)
+3. [데이터 분할: train / validation / test](#3-데이터-분할-train--validation--test)
+4. [시스템 구조](#4-시스템-구조)
+5. [사용 모델 설명](#5-사용-모델-설명)
+6. [전처리 및 학습 설정](#6-전처리-및-학습-설정)
+7. [성능 비교 방법](#7-성능-비교-방법)
+8. [실험 결과](#8-실험-결과)
+9. [학습 로그](#9-학습-로그)
+10. [Streamlit 데모 및 AWS EC2 배포](#10-streamlit-데모-및-aws-ec2-배포)
+11. [코드 구조](#11-코드-구조)
+12. [프로젝트 한계와 개선 방향](#12-프로젝트-한계와-개선-방향)
+13. [PDF 제출 방법](#13-pdf-제출-방법)
+14. [참고 자료](#14-참고-자료)
 
 ---
 
-<a id="1-프로젝트-개요"></a>
-## 1. 프로젝트 개요
+## 1. 문제 정의
 
-| 항목 | 내용 |
+### 1.1 문제 배경
+
+제조 공정에서는 제품 표면의 흠집, 오염, 파손, 형태 변형 등을 빠르게 탐지해야 한다. 그러나 모든 결함 유형을 사전에 충분히 수집하기는 어렵고, 실제 산업 현장에서는 정상 제품 데이터가 불량 제품 데이터보다 훨씬 많다. 따라서 본 프로젝트는 **정상 이미지 중심 학습(one-class / unsupervised anomaly detection)** 관점에서 제품 결함 여부를 판정하는 문제를 다룬다.
+
+### 1.2 입력과 출력
+
+| 구분 | 내용 |
 |---|---|
-| 프로젝트명 | **DefectVision-AD** |
-| 주제 | 산업 제품 이미지 기반 결함 이상탐지 |
-| 핵심 기술 | 영상처리, 딥러닝, 이상탐지, 결함 위치 시각화 |
-| 데이터셋 | MVTec AD, VisA |
-| 주요 프레임워크 | PyTorch |
-| 주요 모델 후보 | AutoEncoder, PatchCore, PaDiM, FastFlow |
-| 최종 결과 | 정상/이상 판별, 이상 점수 산출, 결함 위치 heatmap 시각화 |
+| 입력 | 제품 이미지 1장 또는 batch |
+| 출력 1 | 이미지 단위 정상/불량 예측 결과 |
+| 출력 2 | anomaly score |
+| 출력 3 | anomaly map |
+| 출력 4 | heatmap overlay |
+| 출력 5 | threshold 기반 binary mask |
 
-본 프로젝트는 제조 공정에서 촬영된 제품 이미지에 대해 **정상 제품과 결함 제품을 구분**하고, 결함이 있는 경우 **어느 영역이 이상인지 시각적으로 표시**하는 것을 목표로 한다.
-
-일반적인 이미지 분류 프로젝트와 달리, 본 프로젝트는 다음과 같은 특징을 가진다.
-
-- 정상 이미지 중심 학습
-- 결함 이미지가 적은 상황을 가정
-- 제품 단위 이상 여부 판단
-- 픽셀 또는 영역 단위 결함 위치 추정
-- heatmap 기반 결과 시각화
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="2-주제-선정-이유"></a>
-## 2. 주제 선정 이유
-
-<details open>
-<summary><strong>왜 산업 제품 결함 이상탐지인가?</strong></summary>
-
-### 2.1 현실적인 데이터 확보 가능성
-
-영상처리 프로젝트는 보통 직접 영상을 촬영하거나 데이터를 구축해야 하는 부담이 있다. 그러나 산업 이미지 이상탐지 분야에는 연구 및 교육 목적으로 활용 가능한 공개 데이터셋이 존재한다.
-
-대표적으로 **MVTec AD**와 **VisA**는 정상/이상 이미지와 결함 영역 annotation을 제공하므로, 직접 제품 이미지를 촬영하지 않아도 실험이 가능하다.
-
-### 2.2 영상처리 주제와의 적합성
-
-본 프로젝트는 단순히 이미지를 분류하는 것이 아니라 다음과 같은 영상처리 요소를 포함한다.
-
-- 이미지 크기 정규화
-- 색상 공간 변환
-- 노이즈 제거
-- edge/texture 특징 분석
-- anomaly map 생성
-- heatmap overlay 시각화
-- 결함 영역 segmentation
-
-따라서 “영상처리 기반 머신러닝/딥러닝 이상탐지”라는 요구사항에 적합하다.
-
-### 2.3 구현 가능성
-
-산업 이상탐지는 실제 제조업에서 활용되는 주제이지만, 공개 데이터셋과 오픈소스 라이브러리를 활용하면 충분히 구현할 수 있다.
-
-특히 PyTorch, OpenCV, Anomalib을 사용하면 다음과 같은 단계적 구현이 가능하다.
-
-1. 기본 영상처리 전처리
-2. AutoEncoder 기반 baseline 구현
-3. PatchCore 또는 PaDiM 기반 성능 개선
-4. 결함 위치 heatmap 시각화
-5. Streamlit 또는 Gradio 기반 데모 제작
-
-</details>
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="3-프로젝트-목표"></a>
-## 3. 프로젝트 목표
-
-### 3.1 핵심 목표
-
-> **정상 제품 이미지만 학습한 모델이 테스트 이미지에서 결함 여부를 판별하고, 결함 의심 영역을 heatmap으로 시각화하도록 구현한다.**
-
-### 3.2 세부 목표
-
-- MVTec AD 또는 VisA 데이터셋을 활용한 산업 이미지 이상탐지 실험 환경 구축
-- OpenCV 및 TorchVision 기반 이미지 전처리 파이프라인 구현
-- PyTorch 기반 AutoEncoder baseline 모델 구현
-- PatchCore, PaDiM 등 기존 이상탐지 모델과 성능 비교
-- 이미지 단위 anomaly score 산출
-- 픽셀 단위 anomaly map 생성
-- 결함 위치를 heatmap 형태로 시각화
-- 실험 결과를 정량 지표와 시각 자료로 정리
-- 사용자가 이미지를 업로드하면 이상 여부를 확인할 수 있는 간단한 데모 구현
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="4-기대효과"></a>
-## 4. 기대효과
-
-<details>
-<summary><strong>기술적 기대효과</strong></summary>
-
-- PyTorch 기반 컴퓨터비전 모델 구현 경험 확보
-- 정상 데이터 중심의 one-class anomaly detection 개념 이해
-- 이미지 분류와 segmentation의 차이 이해
-- anomaly score, anomaly map, heatmap 생성 과정 이해
-- OpenCV 기반 영상처리 전처리 능력 향상
-- 실제 산업 비전 검사와 유사한 프로젝트 경험 확보
-
-</details>
-
-<details>
-<summary><strong>실무적 기대효과</strong></summary>
-
-- 제조 공정 품질 검사 자동화에 적용 가능한 아이디어 도출
-- 사람이 육안으로 검사하기 어려운 미세 결함 탐지 가능성 확인
-- 결함 위치 시각화를 통해 모델 판단 근거 설명 가능
-- 불량 검출 자동화 시스템의 프로토타입 제작 가능
-
-</details>
-
-<details>
-<summary><strong>학습 및 포트폴리오 기대효과</strong></summary>
-
-- 단순 분류 모델보다 완성도 높은 컴퓨터비전 포트폴리오 제작 가능
-- 데이터 전처리, 모델 학습, 평가, 시각화, 데모까지 end-to-end 경험 가능
-- GitHub README만으로 프로젝트 의도와 구조를 명확히 보여줄 수 있음
-- 향후 졸업작품, 캡스톤디자인, AI 포트폴리오 프로젝트로 확장 가능
-
-</details>
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="5-자료조사-및-데이터셋-출처"></a>
-## 5. 자료조사 및 데이터셋 출처
-
-### 5.1 MVTec AD
-
-| 항목 | 내용 |
-|---|---|
-| 정식 명칭 | MVTec Anomaly Detection Dataset |
-| 목적 | 산업 검사 환경의 이상탐지 benchmark |
-| 데이터 구성 | 15개 object/texture category |
-| 이미지 수 | 5,000장 이상의 고해상도 이미지 |
-| 학습 데이터 | 결함 없는 정상 이미지 중심 |
-| 테스트 데이터 | 정상 이미지와 다양한 결함 이미지 포함 |
-| annotation | 결함 영역 ground truth mask 제공 |
-| 공식 출처 | [MVTec AD 공식 페이지](https://www.mvtec.com/research-teaching/datasets/mvtec-ad) |
-
-MVTec AD는 산업 검사 환경을 목표로 구성된 대표적인 이상탐지 데이터셋이다. 각 category는 결함 없는 학습 이미지와 정상/이상 테스트 이미지로 구성되어 있어, **정상 데이터만으로 학습한 뒤 결함을 탐지하는 실험**에 적합하다.
-
-### 5.2 VisA
-
-| 항목 | 내용 |
-|---|---|
-| 정식 명칭 | Visual Anomaly Dataset |
-| 목적 | 산업 제품 이미지 기반 이상탐지 및 segmentation |
-| 데이터 구성 | 12개 object class, 3개 domain |
-| 이미지 수 | 총 10,821장 |
-| 정상 이미지 | 9,621장 |
-| 이상 이미지 | 1,200장 |
-| annotation | image-level 및 pixel-level annotation 제공 |
-| 공식 출처 | [AWS Open Data Registry - VisA](https://registry.opendata.aws/visa/) |
-
-VisA는 MVTec AD보다 이미지 수가 많고 여러 제품 class를 포함한다. 정상/이상 이미지와 픽셀 단위 annotation을 제공하므로, 이미지 단위 분류와 결함 위치 탐지를 함께 실험할 수 있다.
-
-### 5.3 Anomalib
-
-| 항목 | 내용 |
-|---|---|
-| 정식 명칭 | Anomalib |
-| 목적 | Visual anomaly detection 모델 개발 및 benchmark 지원 |
-| 주요 기능 | 데이터셋 로딩, 모델 학습, 평가, 시각화, 배포 지원 |
-| 관련 모델 | PatchCore, PaDiM, FastFlow 등 |
-| 공식 출처 | [Anomalib GitHub](https://github.com/open-edge-platform/anomalib) |
-| 문서 | [Anomalib Documentation](https://anomalib.readthedocs.io/) |
-
-Anomalib은 이미지 또는 영상 데이터에서 이상을 탐지하고 위치를 추정하는 visual anomaly detection에 초점을 둔 오픈소스 라이브러리다. 본 프로젝트에서는 직접 구현한 baseline과 Anomalib 기반 모델을 비교하는 방식으로 활용할 수 있다.
-
-### 5.4 PatchCore
-
-| 항목 | 내용 |
-|---|---|
-| 모델명 | PatchCore |
-| 핵심 아이디어 | 정상 이미지의 patch feature를 memory bank에 저장하고, 테스트 이미지 patch와 비교 |
-| 장점 | 산업 이미지 이상탐지에서 강력한 baseline으로 활용 가능 |
-| 공식 문서 | [Anomalib PatchCore Documentation](https://anomalib.readthedocs.io/en/v2.0.0/markdown/guides/reference/models/image/patchcore.html) |
-
-PatchCore는 사전학습 CNN backbone에서 추출한 patch feature를 저장하고, 테스트 이미지의 patch가 정상 feature와 얼마나 다른지를 계산하여 이상을 탐지한다.
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="6-문제-정의"></a>
-## 6. 문제 정의
-
-### 6.1 입력
-
-- 제품 이미지 1장
-- 또는 제품 이미지 batch
-
-### 6.2 출력
-
-- 이미지 단위 정상/이상 예측 결과
-- anomaly score
-- 결함 의심 영역 heatmap
-- 결함 영역 binary mask
-- 원본 이미지 + heatmap overlay 결과
-
-### 6.3 문제 유형
+### 1.3 문제 유형
 
 | 관점 | 문제 유형 |
 |---|---|
-| 머신러닝 관점 | Unsupervised / One-Class Anomaly Detection |
-| 컴퓨터비전 관점 | Image Classification + Defect Localization |
-| 영상처리 관점 | Texture/Edge/Region 기반 이미지 분석 및 시각화 |
+| 머신러닝 | Unsupervised / One-Class Anomaly Detection |
+| 컴퓨터비전 | Image-level Classification + Pixel-level Localization |
+| 영상처리 | Resize, Normalize, Heatmap, Mask, Overlay Visualization |
 
-### 6.4 핵심 가정
-
-- 실제 산업 현장에서는 결함 데이터보다 정상 데이터가 훨씬 많다.
-- 따라서 정상 패턴을 학습한 뒤 정상에서 벗어난 영역을 이상으로 판단한다.
-- 단순히 “불량/정상”만 맞히는 것이 아니라, “왜 불량인지”를 시각적으로 보여주는 것이 중요하다.
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
+본 프로젝트의 핵심은 단순히 정상/불량을 맞히는 것뿐 아니라, 모델이 어느 영역을 결함으로 의심했는지를 heatmap으로 설명하는 것이다.
 
 ---
 
-<a id="7-예상-기술-스택"></a>
-## 7. 예상 기술 스택
+## 2. 데이터셋 설명
 
-> 아래 명칭은 프로젝트 진행 중 변경 가능하다.
+### 2.1 사용 데이터셋
 
-| 구분 | 기술 후보 | 사용 목적 |
-|---|---|---|
-| Language | Python | 전체 프로젝트 개발 |
-| Deep Learning | PyTorch | 모델 구현 및 학습 |
-| Vision Utility | TorchVision | transform, backbone, 이미지 처리 |
-| Image Processing | OpenCV | 이미지 전처리, heatmap overlay |
-| Data Handling | NumPy, Pandas | 수치 연산 및 실험 결과 정리 |
-| Visualization | Matplotlib, Seaborn | 성능 그래프 및 결과 시각화 |
-| Model Library | Anomalib | 이상탐지 모델 benchmark |
-| Experiment Tracking | TensorBoard 또는 MLflow | 학습 로그 및 실험 관리 |
-| Demo | Streamlit 또는 Gradio | 사용자 이미지 업로드 데모 |
-| Environment | Conda 또는 venv | Python 환경 관리 |
-| Version Control | Git, GitHub | 코드 및 문서 관리 |
+최종 실험에는 **MVTec AD(MVTec Anomaly Detection Dataset)** 를 사용하였다. MVTec AD는 산업 제품 및 texture 이미지에 대해 정상 이미지, 불량 이미지, pixel-level ground truth mask를 제공하는 대표적인 이상탐지 benchmark 데이터셋이다.
 
-### 7.1 최소 구현 스택
+초기 프로젝트 계획에는 MVTec AD와 VisA를 모두 고려하였으나, 학습 시간, Colab GPU 사용 시간, EC2 배포 용량을 고려하여 최종 보고서 실험은 MVTec AD의 6개 category에 집중하였다.
 
-```text
-Python
-PyTorch
-TorchVision
-OpenCV
-NumPy
-Matplotlib
-scikit-learn
-```
+| 항목 | 내용 |
+|---|---|
+| 데이터셋명 | MVTec AD |
+| 공식 출처 | https://www.mvtec.com/research-teaching/datasets/mvtec-ad |
+| 전체 구성 | 15개 object/texture category |
+| 최종 사용 category | bottle, cable, capsule, carpet, grid, hazelnut |
+| 학습 데이터 | 정상 이미지(`train/good`) 중심 |
+| 테스트 데이터 | 정상 이미지(`test/good`) + 결함 이미지(`test/<defect_type>`) |
+| 결함 위치 annotation | `ground_truth/<defect_type>` mask 제공 |
 
-### 7.2 확장 구현 스택
+### 2.2 최종 사용 category 선정 이유
 
-```text
-Anomalib
-PyTorch Lightning
-Streamlit
-MLflow
-Weights & Biases
-```
+MVTec AD 전체 15개 category를 모두 학습할 경우 AutoEncoder 장기 학습과 PatchCore memory bank 생성 시간이 길어져 Colab 런타임 제한에 걸릴 가능성이 높았다. 따라서 대표적인 object/texture category가 섞이도록 다음 6개 category를 선택하였다.
 
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
+- `bottle`: 객체형 제품, 파손/오염 결함
+- `cable`: 선형 구조가 복잡한 객체형 제품
+- `capsule`: 작고 둥근 제품, 인쇄/균열/눌림 결함
+- `carpet`: texture 기반 표면 결함
+- `grid`: 반복 패턴 기반 texture 결함
+- `hazelnut`: 자연물 형태 객체, 균열/절단/구멍 결함
 
 ---
 
-<a id="8-시스템-구조"></a>
-## 8. 시스템 구조
+## 3. 데이터 분할: train / validation / test
+
+MVTec AD는 기본적으로 `train`과 `test` split을 제공한다. 본 프로젝트에서는 다음 방식으로 사용하였다.
+
+- `train/good`: 정상 이미지만 사용
+- `validation`: `train/good` 중 15%를 validation으로 분리
+- `test/good`: 정상 테스트 이미지
+- `test/<defect_type>`: 불량 테스트 이미지
+- `ground_truth/<defect_type>`: pixel-level localization 평가용 mask
+
+### 3.1 Category별 데이터 수
+
+| Category | Train good | Validation good | Test good | Test anomaly | Test total | Defect types |
+|---|---:|---:|---:|---:|---:|---|
+| `bottle` | 209 | 31 | 20 | 63 | 83 | broken_large, broken_small, contamination |
+| `cable` | 224 | 34 | 58 | 92 | 150 | bent_wire, cable_swap, combined, cut_inner_insulation, cut_outer_insulation, missing_cable, missing_wire, poke_insulation |
+| `capsule` | 219 | 33 | 23 | 109 | 132 | crack, faulty_imprint, poke, scratch, squeeze |
+| `carpet` | 280 | 42 | 28 | 89 | 117 | color, cut, hole, metal_contamination, thread |
+| `grid` | 264 | 40 | 21 | 57 | 78 | bent, broken, glue, metal_contamination, thread |
+| `hazelnut` | 391 | 59 | 40 | 70 | 110 | crack, cut, hole, print |
+
+### 3.2 데이터 사용 방식
+
+| 데이터 구분 | 사용 목적 |
+|---|---|
+| Train | 정상 패턴 학습, AutoEncoder 복원 학습, PatchCore memory bank 구성 |
+| Validation | AutoEncoder early stopping 및 best epoch 선택 |
+| Test | 최종 성능 평가, README/Streamlit용 시각화 생성 |
+
+---
+
+## 4. 시스템 구조
+
+### 4.1 전체 처리 흐름
 
 ```mermaid
 flowchart TD
-    A[공개 데이터셋 다운로드<br/>MVTec AD / VisA] --> B[이미지 전처리<br/>Resize / Normalize / Augmentation]
-    B --> C[정상 이미지 기반 모델 학습]
-    C --> D[테스트 이미지 입력]
-    D --> E[Anomaly Score 계산]
-    E --> F{Threshold 비교}
-    F -->|정상 범위| G[정상 이미지로 판단]
-    F -->|이상 범위| H[이상 이미지로 판단]
-    E --> I[Anomaly Map 생성]
-    I --> J[Heatmap Overlay 시각화]
-    H --> K[결과 리포트 저장]
-    G --> K
-    J --> K
+    A[MVTec AD 데이터셋 준비] --> B[Category 선택]
+    B --> C[이미지 전처리]
+    C --> D1[AutoEncoder 학습]
+    C --> D2[PatchCore feature memory bank 구성]
+    D1 --> E[Anomaly score 계산]
+    D2 --> E
+    E --> F[Threshold와 비교]
+    F -->|score < threshold| G[정상 판정]
+    F -->|score >= threshold| H[불량 의심 판정]
+    E --> I[Anomaly map 생성]
+    I --> J[Heatmap overlay 생성]
+    J --> K[CSV/PNG 결과 저장]
+    K --> L[GitHub README 반영]
+    K --> M[Streamlit 데모 배포]
 ```
 
-### 8.1 전체 처리 흐름
+### 4.2 모델 추론 구조
 
-1. MVTec AD 또는 VisA 데이터셋 준비
-2. train/test 데이터 분리 확인
-3. 이미지 resize 및 normalize
-4. 정상 이미지 중심 모델 학습
-5. 테스트 이미지 입력
-6. anomaly score 계산
-7. threshold 기반 정상/이상 판별
-8. anomaly map 생성
-9. heatmap overlay 결과 저장
-10. 평가 지표 계산 및 결과 분석
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="9-핵심-기능"></a>
-## 9. 핵심 기능
-
-<details open>
-<summary><strong>1. 데이터셋 로딩 기능</strong></summary>
-
-- MVTec AD 데이터셋 구조 자동 인식
-- VisA 데이터셋 구조 자동 인식
-- category별 데이터셋 선택 기능
-- train/test split 로딩
-- ground truth mask 로딩
-
-</details>
-
-<details open>
-<summary><strong>2. 이미지 전처리 기능</strong></summary>
-
-- 이미지 resize
-- RGB 변환
-- normalization
-- grayscale 변환 옵션
-- Gaussian blur, edge detection 등 OpenCV 기반 전처리 옵션
-- augmentation 적용 여부 설정
-
-</details>
-
-<details open>
-<summary><strong>3. 이상탐지 모델 학습 기능</strong></summary>
-
-- AutoEncoder baseline 학습
-- reconstruction error 기반 anomaly score 계산
-- PatchCore 또는 PaDiM 모델 학습 및 추론
-- 모델별 실험 결과 비교
-
-</details>
-
-<details open>
-<summary><strong>4. 결함 위치 시각화 기능</strong></summary>
-
-- anomaly map 생성
-- threshold 기반 binary mask 생성
-- heatmap overlay 이미지 생성
-- 원본 이미지, ground truth, prediction 비교 이미지 저장
-
-</details>
-
-<details open>
-<summary><strong>5. 데모 기능</strong></summary>
-
-- 사용자가 제품 이미지를 업로드
-- 모델이 정상/이상 여부 예측
-- anomaly score 출력
-- heatmap 결과 이미지 출력
-
-</details>
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="10-모델링-전략"></a>
-## 10. 모델링 전략
-
-### 10.1 Baseline: AutoEncoder
-
-AutoEncoder는 입력 이미지를 압축한 뒤 다시 복원하는 구조를 가진다. 정상 이미지만 학습하면 정상 이미지는 잘 복원하지만, 결함 이미지는 상대적으로 복원이 어렵다.
-
-따라서 다음 값을 anomaly score로 활용할 수 있다.
-
-```text
-Anomaly Score = Original Image와 Reconstructed Image의 차이
+```mermaid
+flowchart LR
+    A[입력 이미지] --> B[Resize 256x256]
+    B --> C[RGB 변환 및 ImageNet Normalize]
+    C --> D{모델 선택}
+    D -->|AutoEncoder| E[복원 이미지 생성]
+    E --> F[복원 오차 map]
+    D -->|PatchCore| G[ResNet18 feature 추출]
+    G --> H[정상 feature memory bank와 거리 계산]
+    F --> I[Anomaly score / map]
+    H --> I
+    I --> J[Threshold 판정]
+    I --> K[Heatmap overlay]
 ```
 
-#### 장점
-
-- 직접 구현하기 쉬움
-- 이상탐지 원리를 설명하기 좋음
-- 프로젝트 baseline으로 적합
-
-#### 단점
-
-- 복잡한 texture 결함에서는 성능이 낮을 수 있음
-- 결함 영역 localization 품질이 제한적일 수 있음
-
 ---
 
-### 10.2 개선 모델: PatchCore
+## 5. 사용 모델 설명
 
-PatchCore는 정상 이미지에서 추출한 patch feature를 memory bank에 저장하고, 테스트 이미지 patch가 정상 patch와 얼마나 다른지를 계산한다.
+본 프로젝트에서는 직접 구현한 **AutoEncoder**와 경량 구현한 **PatchCore-style model**을 비교하였다.
 
-#### 장점
+### 5.1 AutoEncoder
 
-- 산업 이미지 이상탐지에서 강력한 baseline
-- 학습 방식이 비교적 단순함
-- anomaly map 생성에 적합
+AutoEncoder는 입력 이미지를 encoder로 압축한 뒤 decoder로 다시 복원하는 구조이다. 정상 이미지만 학습하면 정상 이미지는 잘 복원하지만, 결함이 있는 이미지는 정상 패턴과 달라 복원 오차가 커진다는 가정을 사용한다.
 
-#### 단점
+#### 구조
 
-- feature memory bank 관리 필요
-- 데이터와 backbone에 따라 추론 속도 차이가 발생할 수 있음
-
----
-
-### 10.3 비교 후보: PaDiM, FastFlow
-
-| 모델 | 개념 | 활용 목적 |
-|---|---|---|
-| AutoEncoder | 복원 오차 기반 | 직접 구현 baseline |
-| PatchCore | patch feature memory bank 기반 | 성능 개선 모델 |
-| PaDiM | pretrained feature의 분포 모델링 | 통계 기반 비교 모델 |
-| FastFlow | normalizing flow 기반 | 고급 모델 비교 후보 |
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="11-데이터-전처리-계획"></a>
-## 11. 데이터 전처리 계획
-
-### 11.1 기본 전처리
-
-| 단계 | 설명 |
-|---|---|
-| 이미지 로딩 | PIL 또는 OpenCV 사용 |
-| 크기 통일 | 224x224 또는 256x256 |
-| 색상 변환 | BGR to RGB |
-| 정규화 | ImageNet mean/std 또는 dataset mean/std |
-| tensor 변환 | PyTorch Tensor 변환 |
-
-### 11.2 선택 전처리
-
-| 기법 | 목적 |
-|---|---|
-| Grayscale | 색상보다 texture가 중요한 경우 사용 |
-| Gaussian Blur | 노이즈 완화 |
-| Canny Edge | 결함 경계 강조 |
-| Histogram Equalization | 명암 대비 개선 |
-| Random Crop | 일반화 성능 향상 |
-| Rotation/Flip | 데이터 다양성 확보 |
-
-### 11.3 전처리 비교 실험
-
-다음 실험을 통해 전처리 방식에 따른 성능 차이를 비교한다.
-
-```text
-Experiment 1: RGB 원본 이미지
-Experiment 2: Grayscale 이미지
-Experiment 3: Edge 강조 이미지
-Experiment 4: Augmentation 적용 이미지
+```mermaid
+flowchart LR
+    A[Input image 3x256x256] --> B[ConvBlock 3→32 stride 2]
+    B --> C[ConvBlock 32→64 stride 2]
+    C --> D[ConvBlock 64→128 stride 2]
+    D --> E[ConvBlock 128→256 latent]
+    E --> F[DeconvBlock 256→128]
+    F --> G[DeconvBlock 128→64]
+    G --> H[DeconvBlock 64→32]
+    H --> I[ConvTranspose + Conv2d]
+    I --> J[Reconstructed image]
+    J --> K[Original과 MSE 비교]
 ```
 
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
+#### 특징
+
+| 항목 | 내용 |
+|---|---|
+| 학습 방식 | 정상 이미지 복원 학습 |
+| Pretrained weight | 사용하지 않음 |
+| Transfer Learning | 사용하지 않음 |
+| 학습 시작 | 처음부터 학습(from scratch) |
+| anomaly score | 원본 이미지와 복원 이미지의 MSE reconstruction error |
+| anomaly map | pixel-wise reconstruction error map |
+| 장점 | 구조가 단순하고 이상탐지 원리 설명이 쉬움 |
+| 단점 | 복잡한 texture나 미세 결함에서는 불량을 정상처럼 복원할 수 있음 |
+
+### 5.2 PatchCore-style model
+
+PatchCore는 정상 이미지에서 추출한 patch-level feature를 memory bank에 저장하고, 테스트 이미지의 patch feature가 정상 feature와 얼마나 다른지 거리로 계산하는 방식이다. 본 프로젝트에서는 `torchvision.models.resnet18`의 중간 feature를 이용한 경량 PatchCore wrapper를 구현하였다.
+
+#### 구조
+
+```mermaid
+flowchart LR
+    A[Input image] --> B[ImageNet pretrained ResNet18]
+    B --> C[layer1/layer2 feature map]
+    C --> D[Patch feature 추출 및 normalize]
+    D --> E[정상 train feature memory bank]
+    F[Test image feature] --> G[Nearest neighbor distance]
+    E --> G
+    G --> H[Patch score map]
+    H --> I[Upsampling to image size]
+    I --> J[Anomaly score / heatmap]
+```
+
+#### 특징
+
+| 항목 | 내용 |
+|---|---|
+| 학습 방식 | 정상 이미지 feature memory bank 구축 |
+| Pretrained weight | 사용함 |
+| Backbone | ResNet18 |
+| Transfer Learning | ImageNet pretrained CNN feature를 산업 이미지 이상탐지에 활용 |
+| 신경망 weight 업데이트 | 없음. Feature extractor는 eval 모드로 사용 |
+| anomaly score | test patch와 memory bank patch 간 최근접 거리의 최대값 |
+| anomaly map | patch distance map을 원본 이미지 크기로 upsampling |
+| 장점 | 산업 이상탐지에서 강한 성능, localization에 유리 |
+| 단점 | memory bank 크기와 feature 거리 계산 때문에 추론 비용이 증가할 수 있음 |
+
+### 5.3 모델 구조 및 학습 방식 변경
+
+| 구분 | AutoEncoder baseline | 최종 AutoEncoder 실험 | PatchCore 실험 |
+|---|---|---|---|
+| 모델 구조 | Conv AutoEncoder | 동일 구조 유지 | ResNet18 feature extractor + memory bank |
+| 학습 안정화 | 단순 epoch 반복 | validation split, early stopping, LR scheduler, weight decay, augmentation, resume checkpoint 적용 | 별도 gradient 학습 없음 |
+| Pretrained | 없음 | 없음 | ImageNet pretrained ResNet18 사용 |
+| Threshold | train score p95 | train score p95 | train score p95 |
+| 결과 | baseline 비교 | 과적합 방지 포함 baseline | 최종 최고 성능 모델 |
 
 ---
 
-<a id="12-평가-지표"></a>
-## 12. 평가 지표
+## 6. 전처리 및 학습 설정
 
-### 12.1 Image-level 평가
+### 6.1 공통 전처리
 
-| 지표 | 설명 |
+| 단계 | 설정 |
 |---|---|
-| Accuracy | 전체 이미지 중 정상/이상 분류가 맞은 비율 |
-| Precision | 이상으로 예측한 이미지 중 실제 이상 이미지 비율 |
-| Recall | 실제 이상 이미지 중 모델이 이상으로 탐지한 비율 |
+| 이미지 로딩 | PIL 기반 RGB 변환 |
+| 이미지 크기 | 256 × 256 |
+| Tensor 변환 | CHW float tensor |
+| Normalization | ImageNet mean/std: `[0.485, 0.456, 0.406]`, `[0.229, 0.224, 0.225]` |
+| Mask 처리 | ground truth mask를 256 × 256으로 resize, binary tensor화 |
+| 선택 전처리 | grayscale, gaussian blur, canny, histogram equalization 옵션 구현 |
+| 실제 최종 실험 | RGB + Resize + Normalize 사용 |
+
+### 6.2 AutoEncoder 학습 parameter
+
+| 항목 | 값 |
+|---|---:|
+| image size | 256 |
+| batch size | 8 |
+| max epoch | 80 |
+| min epoch | 20 |
+| validation ratio | 0.15 |
+| learning rate | 0.0005 |
+| optimizer | AdamW |
+| weight decay | 0.0001 |
+| loss | MSELoss |
+| early stopping patience | 4 |
+| early stopping min delta | 1e-5 |
+| LR scheduler | ReduceLROnPlateau |
+| scheduler factor | 0.5 |
+| scheduler patience | 4 |
+| gradient clipping | max norm 1.0 |
+| augmentation | random horizontal flip, random vertical flip |
+| AMP | CUDA 사용 시 mixed precision 사용 |
+| resume checkpoint | 10 epoch마다 Drive에 저장 |
+| threshold | train score의 95 percentile |
+
+### 6.3 PatchCore 학습 parameter
+
+| 항목 | 값 |
+|---|---:|
+| image size | 256 |
+| batch size | 4 |
+| backbone | ResNet18 |
+| pretrained | True |
+| max memory patches | 50,000 |
+| feature layer | conv1, bn1, relu, maxpool, layer1, layer2 |
+| feature normalization | L2 normalize |
+| distance | Euclidean distance via `torch.cdist` |
+| threshold | train score의 95 percentile |
+
+### 6.4 학습 환경
+
+| 항목 | 내용 |
+|---|---|
+| 학습 환경 | Google Colab |
+| 저장소 | Google Drive |
+| 배포 환경 | AWS EC2 + Streamlit |
+| 버전 관리 | GitHub |
+| Colab 안정화 | `num_workers=0`, 완료 항목 skip, resume checkpoint 사용 |
+
+---
+
+## 7. 성능 비교 방법
+
+### 7.1 평가 기준
+
+이미지 단위 분류 성능과 pixel 단위 localization 성능을 함께 비교하였다.
+
+| 지표 | 의미 |
+|---|---|
+| Threshold | anomaly score를 정상/불량으로 나누는 기준값 |
+| Accuracy | 전체 test 이미지 중 정상/불량 판정을 맞힌 비율 |
+| Precision | 불량으로 예측한 이미지 중 실제 불량 비율 |
+| Recall | 실제 불량 이미지 중 모델이 불량으로 탐지한 비율 |
 | F1-score | Precision과 Recall의 조화 평균 |
-| AUROC | threshold 변화에 따른 분류 성능 평가 |
+| AUROC | threshold 변화에 따른 image-level 분류 성능 |
+| Pixel AUROC | ground truth mask 기준 pixel-level 결함 위치 탐지 성능 |
 
-### 12.2 Pixel-level 평가
+### 7.2 종합 모델 선택 점수
 
-| 지표 | 설명 |
-|---|---|
-| Pixel AUROC | 픽셀 단위 정상/이상 구분 성능 |
-| IoU | 예측 결함 영역과 실제 결함 영역의 겹침 정도 |
-| PRO Score | 결함 영역 단위 localization 성능 평가 |
-
-### 12.3 시각화 평가
-
-정량 지표뿐 아니라 다음 시각 자료를 함께 제시한다.
-
-- 원본 이미지
-- ground truth mask
-- anomaly map
-- heatmap overlay
-- threshold 적용 binary mask
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="13-예상-결과물"></a>
-## 13. 예상 결과물
-
-### 13.1 GitHub 결과물
-
-- 프로젝트 README
-- 데이터셋 준비 가이드
-- 학습 코드
-- 추론 코드
-- 평가 코드
-- 시각화 코드
-- 실험 결과 이미지
-- 데모 실행 방법
-
-### 13.2 모델 결과물
-
-- 학습된 AutoEncoder 모델
-- PatchCore 또는 PaDiM 실험 결과
-- category별 성능 비교표
-- 정상/이상 예측 결과 CSV
-- anomaly score 분포 그래프
-- heatmap 결과 이미지
-
-### 13.3 데모 결과물
-
-- 이미지 업로드 기능
-- 정상/이상 예측 결과 출력
-- anomaly score 표시
-- 결함 위치 heatmap 출력
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="14-예상-프로젝트-일정"></a>
-## 14. 예상 프로젝트 일정
-
-| 주차 | 작업 내용 |
-|---|---|
-| 1주차 | 자료조사, 데이터셋 구조 파악, 개발 환경 구축 |
-| 2주차 | 데이터 로더 및 전처리 파이프라인 구현 |
-| 3주차 | AutoEncoder baseline 구현 및 학습 |
-| 4주차 | anomaly score 계산 및 heatmap 시각화 구현 |
-| 5주차 | PatchCore 또는 PaDiM 모델 적용 |
-| 6주차 | 모델 성능 비교 및 평가 지표 정리 |
-| 7주차 | Streamlit/Gradio 데모 구현 |
-| 8주차 | README, 발표자료, 최종 보고서 정리 |
-
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
-
----
-
-<a id="15-예상-레포지토리-구조"></a>
-## 15. 예상 레포지토리 구조
+불균형 데이터에서는 Accuracy만으로 모델을 선택하면 불량 탐지 성능을 잘못 판단할 수 있다. 따라서 본 프로젝트는 다음 가중 평균을 사용하였다.
 
 ```text
-DefectVision-AD/
+selection_score = 0.40 × AUROC + 0.25 × F1 + 0.25 × Pixel_AUROC + 0.10 × Accuracy
+```
+
+| 지표 | 가중치 | 이유 |
+|---|---:|---|
+| AUROC | 0.40 | threshold에 덜 의존하는 전체 분류력 |
+| F1 | 0.25 | precision과 recall 균형 |
+| Pixel AUROC | 0.25 | 결함 위치 탐지 품질 |
+| Accuracy | 0.10 | 전체 정답률 참고 |
+
+### 7.3 Inference time 고려
+
+최종 selection score에는 inference time을 포함하지 않았다. 다만 실제 배포에서는 PatchCore가 높은 성능을 보였지만 memory bank와 거리 계산으로 인해 AutoEncoder보다 추론 비용이 커질 수 있다. Streamlit 데모에서는 test sample image를 512px 이하로 축소 저장하고, 모델은 `st.cache_resource`로 캐싱하여 사용자 체감 응답 속도를 개선하였다. 향후에는 다음 코드를 이용해 category/model별 평균 추론 시간을 측정할 수 있다.
+
+```python
+import time
+
+start = time.perf_counter()
+result = predictor.predict_image(image_path)
+elapsed_ms = (time.perf_counter() - start) * 1000
+print(f"inference_time_ms={elapsed_ms:.2f}")
+```
+
+---
+
+## 8. 실험 결과
+
+### 8.1 모델별 평균 성능
+
+| Model | Accuracy | Precision | Recall | F1 | AUROC | Pixel AUROC | Selection score |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `autoencoder` | 0.432 | 0.822 | 0.251 | 0.369 | 0.599 | 0.702 | 0.550 |
+| `patchcore` | 0.874 | 0.944 | 0.876 | 0.904 | 0.967 | 0.960 | 0.940 |
+
+해석하면, 6개 category 평균 기준으로 PatchCore가 AutoEncoder보다 모든 주요 지표에서 높았다. 특히 AutoEncoder는 precision은 높게 나오는 경우가 있었지만 recall이 낮아 실제 불량을 놓치는 경우가 많았다. 반면 PatchCore는 AUROC, F1, Pixel AUROC 모두 높아 이미지 단위 분류와 결함 위치 시각화에 모두 유리했다.
+
+### 8.2 Category별 최고 모델
+
+| Category | Selected model | Accuracy | Precision | Recall | F1 | AUROC | Pixel AUROC | Selection score |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| `bottle` | `patchcore` | 0.952 | 0.940 | 1.000 | 0.969 | 1.000 | 0.978 | 0.982 |
+| `cable` | `patchcore` | 0.833 | 0.924 | 0.793 | 0.854 | 0.912 | 0.884 | 0.883 |
+| `capsule` | `patchcore` | 0.788 | 0.988 | 0.752 | 0.854 | 0.938 | 0.961 | 0.908 |
+| `carpet` | `patchcore` | 0.923 | 0.917 | 0.989 | 0.951 | 0.993 | 0.979 | 0.972 |
+| `grid` | `patchcore` | 0.923 | 0.932 | 0.965 | 0.948 | 0.991 | 0.985 | 0.972 |
+| `hazelnut` | `patchcore` | 0.827 | 0.964 | 0.757 | 0.848 | 0.971 | 0.971 | 0.926 |
+
+최종 선택 결과 6개 category 모두에서 PatchCore가 최고 모델로 선택되었다.
+
+### 8.3 전체 모델 실험 결과
+
+| Category | Model | Threshold | Accuracy | Precision | Recall | F1 | AUROC | Pixel AUROC | Selection score |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `bottle` | `autoencoder` | 0.0092 | 0.554 | 0.933 | 0.444 | 0.602 | 0.652 | 0.713 | 0.645 |
+| `bottle` | `patchcore` | 0.7210 | 0.952 | 0.940 | 1.000 | 0.969 | 1.000 | 0.978 | 0.982 |
+| `cable` | `autoencoder` | 0.0251 | 0.393 | 0.600 | 0.033 | 0.062 | 0.452 | 0.513 | 0.364 |
+| `cable` | `patchcore` | 0.8079 | 0.833 | 0.924 | 0.793 | 0.854 | 0.912 | 0.884 | 0.883 |
+| `capsule` | `autoencoder` | 0.0071 | 0.250 | 0.812 | 0.119 | 0.208 | 0.507 | 0.774 | 0.474 |
+| `capsule` | `patchcore` | 0.6972 | 0.788 | 0.988 | 0.752 | 0.854 | 0.938 | 0.961 | 0.908 |
+| `carpet` | `autoencoder` | 0.0235 | 0.325 | 0.647 | 0.247 | 0.358 | 0.375 | 0.579 | 0.417 |
+| `carpet` | `patchcore` | 0.6810 | 0.923 | 0.917 | 0.989 | 0.951 | 0.993 | 0.979 | 0.972 |
+| `grid` | `autoencoder` | 0.0163 | 0.449 | 0.938 | 0.263 | 0.411 | 0.746 | 0.705 | 0.622 |
+| `grid` | `patchcore` | 0.5788 | 0.923 | 0.932 | 0.965 | 0.948 | 0.991 | 0.985 | 0.972 |
+| `hazelnut` | `autoencoder` | 0.0067 | 0.618 | 1.000 | 0.400 | 0.571 | 0.862 | 0.927 | 0.781 |
+| `hazelnut` | `patchcore` | 0.8348 | 0.827 | 0.964 | 0.757 | 0.848 | 0.971 | 0.971 | 0.926 |
+
+### 8.4 Category별 평균 성능
+
+AutoEncoder와 PatchCore를 모두 포함한 category별 평균 성능은 다음과 같다.
+
+| Category | Avg. Accuracy | Avg. F1 | Avg. AUROC | Avg. Selection score |
+|---|---:|---:|---:|---:|
+| `bottle` | 0.753 | 0.786 | 0.826 | 0.814 |
+| `cable` | 0.613 | 0.458 | 0.682 | 0.623 |
+| `capsule` | 0.519 | 0.531 | 0.723 | 0.691 |
+| `carpet` | 0.624 | 0.655 | 0.684 | 0.694 |
+| `grid` | 0.686 | 0.680 | 0.868 | 0.797 |
+| `hazelnut` | 0.723 | 0.710 | 0.916 | 0.853 |
+
+### 8.5 성능 시각화 자료
+
+#### 모델별 평균 selection score
+
+![모델별 평균 selection score](docs/assets/results/fig_model_average_selection_score.png)
+
+#### Category별 평균 accuracy
+
+![Category별 평균 accuracy](docs/assets/results/fig_category_average_accuracy.png)
+
+#### Category별 최고 모델
+
+![Category별 최고 모델](docs/assets/results/fig_best_model_by_category.png)
+
+#### Category × Model selection score heatmap
+
+![Category × Model selection score heatmap](docs/assets/results/fig_selection_score_heatmap.png)
+
+#### Category × Model accuracy 비교
+
+![Category × Model accuracy 비교](docs/assets/results/fig_accuracy_by_category_model.png)
+
+#### AutoEncoder validation loss 비교
+
+![AutoEncoder best validation loss](docs/assets/results/fig_autoencoder_best_val_loss_by_category.png)
+
+#### AutoEncoder best epoch 비교
+
+![AutoEncoder best epoch](docs/assets/results/fig_autoencoder_best_epoch_by_category.png)
+
+### 8.6 Heatmap sample
+
+아래 이미지는 test image에 대해 원본 이미지, anomaly map, ground truth mask, heatmap overlay를 함께 저장한 예시이다.
+
+![bottle patchcore sample 1](docs/assets/results/samples/mvtec_bottle_patchcore_0_000_panel.png)
+
+![bottle patchcore sample 2](docs/assets/results/samples/mvtec_bottle_patchcore_1_000_panel.png)
+
+---
+
+## 9. 학습 로그
+
+### 9.1 AutoEncoder 학습 로그 요약
+
+AutoEncoder는 category별로 train 정상 이미지 중 일부를 validation으로 분리하여 validation loss가 가장 낮은 epoch의 weight를 저장하였다. 모든 AutoEncoder 실험은 early stopping으로 종료되었다.
+
+| Category | Final epoch | Best epoch | Best validation loss | Early stopped | Accuracy | F1 | AUROC |
+|---|---:|---:|---:|---|---:|---:|---:|
+| `bottle` | 34 | 30 | 0.007447 | True | 0.554 | 0.602 | 0.652 |
+| `cable` | 66 | 62 | 0.018879 | True | 0.393 | 0.062 | 0.452 |
+| `capsule` | 23 | 19 | 0.005311 | True | 0.250 | 0.208 | 0.507 |
+| `carpet` | 48 | 44 | 0.019462 | True | 0.325 | 0.358 | 0.375 |
+| `grid` | 49 | 45 | 0.012879 | True | 0.449 | 0.411 | 0.746 |
+| `hazelnut` | 28 | 24 | 0.003856 | True | 0.618 | 0.571 | 0.862 |
+
+### 9.2 학습 로그 예시
+
+실제 Colab 학습 중 출력되는 로그는 다음과 같은 형식이다.
+
+```text
+epoch=003 train_loss=0.233878 val_loss=0.116877 best_val=0.116877 lr=5.00e-04 no_improve=0/4 *
+epoch=004 train_loss=0.052527 val_loss=0.053736 best_val=0.053736 lr=5.00e-04 no_improve=0/4 *
+epoch=005 train_loss=0.031602 val_loss=0.030653 best_val=0.030653 lr=5.00e-04 no_improve=0/4 *
+```
+
+### 9.3 저장된 로그 파일
+
+| 파일 | 설명 |
+|---|---|
+| `docs/assets/results/all_results.csv` | 전체 category/model 평가 결과 |
+| `docs/assets/results/leaderboard.csv` | selection score 기준 전체 순위 |
+| `docs/assets/results/best_by_category.csv` | category별 최고 모델 |
+| `docs/assets/results/model_summary.csv` | 모델별 평균 성능 |
+| `docs/assets/results/category_summary.csv` | category별 평균 성능 |
+| `docs/assets/results/autoencoder_history_summary.csv` | AutoEncoder 학습 요약 |
+| `docs/assets/results/*.png` | README 및 Streamlit용 성능 시각화 이미지 |
+
+---
+
+## 10. Streamlit 데모 및 AWS EC2 배포
+
+### 10.1 Streamlit 기능
+
+`app/streamlit_app.py`는 다음 기능을 제공한다.
+
+1. 성능 대시보드
+   - 전체 평가 결과 표
+   - category별 최고 모델 표
+   - README용 성능 그래프 표시
+2. 랜덤 이미지 추론
+   - 학습에 사용하지 않은 test sample pool에서 category별 랜덤 이미지 10개 선택
+   - 사용자가 이미지 1장을 선택하면 정상/불량 예측 수행
+   - anomaly score, threshold, heatmap, overlay 표시
+3. 배포 파일 상태 확인
+   - deploy root, model registry, sample manifest, 모델 파일 존재 여부 확인
+
+### 10.2 배포 구조
+
+```text
+EC2
+├── DefectVision-AD-Proj/              # GitHub repository clone
+│   ├── app/streamlit_app.py
+│   ├── src/
+│   ├── docs/assets/results/
+│   └── requirements-ec2.txt
+└── deploy/                            # Google Drive deploy bundle 압축 해제
+    ├── model_registry.json
+    ├── demo_samples_manifest.json
+    ├── demo_samples/
+    └── models/
+```
+
+### 10.3 실행 명령 예시
+
+```bash
+git clone https://github.com/wnstjq0915/DefectVision-AD-Proj.git
+cd DefectVision-AD-Proj
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements-ec2.txt
+
+export DEFECTVISION_DEPLOY_ROOT="$HOME/DefectVision-AD-Proj/deploy"
+python -m streamlit run app/streamlit_app.py \
+  --server.address=0.0.0.0 \
+  --server.port=8501 \
+  --server.headless=true
+```
+
+인바운드 규칙을 열기 어려운 경우에는 Cloudflare Quick Tunnel 등 outbound tunnel을 이용하여 임시 URL을 생성할 수 있다.
+
+---
+
+## 11. 코드 구조
+
+최종 프로젝트 구조는 다음과 같다.
+
+```text
+DefectVision-AD-Proj/
 ├── README.md
 ├── requirements.txt
-├── .gitignore
+├── requirements-ec2.txt
 ├── configs/
 │   ├── dataset.yaml
 │   ├── model_autoencoder.yaml
 │   └── model_patchcore.yaml
 ├── data/
-│   ├── raw/
-│   ├── processed/
 │   └── README.md
 ├── notebooks/
-│   ├── 01_dataset_exploration.ipynb
-│   ├── 02_preprocessing_test.ipynb
-│   └── 03_result_visualization.ipynb
+│   ├── 00_colab_env_dataset_manifest.ipynb
+│   ├── 01_colab_train_eval_all_mvtec_categories_resume.ipynb
+│   └── 02_colab_make_streamlit_bundle_and_push.ipynb
 ├── src/
+│   ├── config.py
 │   ├── datasets/
 │   │   ├── mvtec_dataset.py
 │   │   └── visa_dataset.py
@@ -615,123 +589,90 @@ DefectVision-AD/
 │   ├── preprocessing/
 │   │   └── transforms.py
 │   ├── train.py
-│   ├── inference.py
 │   ├── evaluate.py
+│   ├── inference.py
 │   └── visualize.py
 ├── app/
 │   └── streamlit_app.py
-├── outputs/
-│   ├── checkpoints/
-│   ├── heatmaps/
-│   ├── metrics/
-│   └── figures/
-└── docs/
-    ├── project_plan.md
-    └── experiment_report.md
+├── docs/
+│   ├── project_plan.md
+│   ├── experiment_report.md
+│   └── assets/results/
+├── scripts/
+│   ├── run_streamlit.sh
+│   └── defectvision-streamlit.service
+└── outputs/
+    ├── checkpoints/
+    ├── heatmaps/
+    ├── metrics/
+    └── figures/
 ```
 
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
+### 11.1 주요 코드 역할
+
+| 파일 | 역할 |
+|---|---|
+| `src/datasets/mvtec_dataset.py` | MVTec AD 폴더 구조 로딩, label/mask 생성 |
+| `src/preprocessing/transforms.py` | 이미지 resize, normalize, augmentation, mask 처리 |
+| `src/models/autoencoder.py` | Conv AutoEncoder 모델 및 reconstruction error map |
+| `src/models/patchcore_wrapper.py` | ResNet18 기반 PatchCore-style memory bank 모델 |
+| `src/train.py` | 기본 학습 함수 |
+| `notebooks/01_colab_train_eval_all_mvtec_categories_resume.ipynb` | 최종 실험용 정밀 학습, resume, 평가, 시각화 생성 |
+| `src/evaluate.py` | Accuracy, Precision, Recall, F1, AUROC, Pixel AUROC 계산 |
+| `src/inference.py` | checkpoint 로드, 단일 이미지/폴더 추론 |
+| `src/visualize.py` | anomaly map, heatmap, overlay 이미지 생성 |
+| `app/streamlit_app.py` | EC2 배포용 웹 데모 |
 
 ---
 
-<a id="16-리스크-및-대응-방안"></a>
-## 16. 리스크 및 대응 방안
+## 12. 프로젝트 한계와 개선 방향
 
-| 리스크 | 설명 | 대응 방안 |
-|---|---|---|
-| 데이터셋 용량 문제 | 고해상도 이미지로 인해 저장 공간 필요 | 일부 category부터 실험 |
-| GPU 부족 | 모델 학습 시간이 길어질 수 있음 | 이미지 크기 축소, batch size 조정, Colab 활용 |
-| 모델 성능 부족 | AutoEncoder 성능이 낮을 수 있음 | PatchCore, PaDiM 등 feature 기반 모델 추가 |
-| 전처리 효과 불명확 | 전처리에 따라 성능이 달라질 수 있음 | 전처리별 ablation study 진행 |
-| 평가 지표 이해 어려움 | AUROC, PRO Score 등 해석 필요 | image-level 지표부터 적용 후 pixel-level로 확장 |
-| 라이선스 문제 | 데이터셋별 사용 조건 확인 필요 | 공식 페이지의 license 및 terms 확인 후 사용 |
+### 12.1 한계
 
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
+- 전체 MVTec AD 15개 category 중 6개 category만 최종 실험에 사용하였다.
+- VisA 데이터셋은 프로젝트 확장 대상으로 코드 구조에는 고려했으나 최종 성능 비교에는 포함하지 않았다.
+- inference time은 정량 성능표에 포함하지 않고, 배포 데모에서의 실시간 동작 가능성 중심으로 확인하였다.
+- AutoEncoder는 단순 reconstruction 기반이라 일부 category에서 recall이 낮았다.
+- PatchCore는 성능이 높았지만 memory bank 기반이라 모델 파일과 추론 비용이 커질 수 있다.
 
----
+### 12.2 개선 방향
 
-<a id="17-참고자료"></a>
-## 17. 참고자료
-
-### Dataset
-
-- [MVTec AD 공식 페이지](https://www.mvtec.com/research-teaching/datasets/mvtec-ad)
-- [AWS Open Data Registry - Visual Anomaly Dataset, VisA](https://registry.opendata.aws/visa/)
-- [Anomalib VisA Dataset Documentation](https://anomalib.readthedocs.io/en/v1/markdown/guides/reference/data/image/visa.html)
-
-### Library / Framework
-
-- [PyTorch 공식 문서](https://pytorch.org/docs/stable/index.html)
-- [TorchVision Transforms 공식 문서](https://docs.pytorch.org/vision/stable/transforms.html)
-- [OpenCV 공식 문서](https://docs.opencv.org/)
-- [Anomalib GitHub](https://github.com/open-edge-platform/anomalib)
-- [Anomalib Documentation](https://anomalib.readthedocs.io/)
-
-### Model
-
-- [PatchCore - Anomalib Documentation](https://anomalib.readthedocs.io/en/v2.0.0/markdown/guides/reference/models/image/patchcore.html)
+- MVTec AD 전체 15개 category로 실험 확장
+- VisA dataset까지 포함한 cross-dataset 비교
+- PaDiM, FastFlow 등 추가 모델 비교
+- inference time, memory usage, model size까지 포함한 배포 관점 평가
+- threshold를 p95 고정이 아니라 validation set 기반 F1 최적화 방식으로 개선
+- Streamlit에서 사용자가 직접 이미지를 업로드하여 추론하는 기능 추가
 
 ---
 
-## License Notice
+## 13. PDF 제출 방법
 
-본 프로젝트는 학습 및 연구 목적의 프로젝트 기획안이다. 데이터셋 사용 전 각 데이터셋의 공식 license와 terms를 반드시 확인해야 한다.
+본 README는 GitHub에서 그대로 열어 PDF로 저장할 수 있도록 작성하였다.
+
+1. GitHub repository에서 `README.md` 페이지 열기
+2. 브라우저 메뉴 또는 단축키로 인쇄 실행
+   - Chrome: `Ctrl + P`
+   - macOS: `Cmd + P`
+3. 대상 프린터를 `PDF로 저장`으로 선택
+4. 배경 그래픽 옵션을 켜면 badge와 이미지가 더 잘 보인다.
+5. Mermaid diagram이 보이지 않는 경우 GitHub 렌더링이 완료된 뒤 다시 인쇄한다.
 
 ---
 
-## 한 줄 요약
+## 14. 참고 자료
 
-> **DefectVision-AD는 공개 산업 이미지 데이터셋을 활용하여 제품 결함 여부와 결함 위치를 탐지하는 PyTorch 기반 영상처리 이상탐지 프로젝트입니다.**
+- MVTec AD 공식 페이지: https://www.mvtec.com/research-teaching/datasets/mvtec-ad
+- PyTorch 공식 문서: https://pytorch.org/docs/stable/index.html
+- TorchVision Models: https://pytorch.org/vision/stable/models.html
+- OpenCV 공식 문서: https://docs.opencv.org/
+- Streamlit 공식 문서: https://docs.streamlit.io/
+- PatchCore 논문: Roth et al., “Towards Total Recall in Industrial Anomaly Detection”, CVPR 2022
 
-[맨 위로 이동](#defectvision-ad-pytorch-기반-산업-제품-결함-이상탐지-프로젝트)
+---
 
+## 최종 결론
 
+본 프로젝트는 MVTec AD의 6개 category를 대상으로 AutoEncoder와 PatchCore-style 모델을 비교하였다. 실험 결과, 모든 category에서 PatchCore가 가장 높은 selection score를 보였으며, 평균 selection score 기준으로도 PatchCore가 AutoEncoder보다 우수했다. 특히 PatchCore는 image-level AUROC와 pixel-level AUROC 모두 높아 단순 정상/불량 분류뿐 아니라 결함 위치 시각화에도 적합했다.
 
-<!-- DEFECTVISION_RESULTS_START -->
-
-## 실험 결과: MVTec 전체 category 모델 비교
-
-이 섹션은 Colab 노트북으로 자동 생성되었습니다. 전체 category별로 AutoEncoder/PatchCore를 학습·평가하고, 단순 Accuracy뿐 아니라 F1, AUROC, Pixel AUROC를 함께 고려한 `selection_score`로 category별 대표 모델을 선택했습니다.
-
-### 모델 선택 기준
-
-```text
-selection_score = 0.40 * AUROC + 0.25 * F1 + 0.25 * Pixel_AUROC + 0.10 * Accuracy
-```
-
-### 모델 평균 성능
-
-| model       |   accuracy |       f1 |    auroc |   pixel_auroc |   selection_score |
-|:------------|-----------:|---------:|---------:|--------------:|------------------:|
-| autoencoder |   0.431539 | 0.368686 | 0.599067 |      0.701944 |          0.550438 |
-| patchcore   |   0.874408 | 0.904138 | 0.967332 |      0.95982  |          0.940363 |
-
-### Category별 최고 모델
-
-| category   | model     |   accuracy |       f1 |    auroc |   pixel_auroc |   selection_score |
-|:-----------|:----------|-----------:|---------:|---------:|--------------:|------------------:|
-| bottle     | patchcore |   0.951807 | 0.969231 | 1        |      0.977815 |          0.981942 |
-| cable      | patchcore |   0.833333 | 0.853801 | 0.911919 |      0.884239 |          0.882611 |
-| capsule    | patchcore |   0.787879 | 0.854167 | 0.937774 |      0.961305 |          0.907765 |
-| carpet     | patchcore |   0.923077 | 0.951351 | 0.992777 |      0.97943  |          0.972114 |
-| grid       | patchcore |   0.923077 | 0.948276 | 0.99081  |      0.985328 |          0.972033 |
-| hazelnut   | patchcore |   0.827273 | 0.848    | 0.970714 |      0.970806 |          0.925714 |
-
-### 시각화
-
-![Model average selection score](docs/assets/results/fig_model_average_selection_score.png)
-
-![Category average accuracy](docs/assets/results/fig_category_average_accuracy.png)
-
-![Best model by category](docs/assets/results/fig_best_model_by_category.png)
-
-![Selection score heatmap](docs/assets/results/fig_selection_score_heatmap.png)
-
-![Accuracy by category and model](docs/assets/results/fig_accuracy_by_category_model.png)
-
-### Streamlit 데모
-
-EC2 배포 후 사용자는 웹사이트에서 category를 선택하고, 학습에 사용되지 않은 test image 후보 중 랜덤 10개를 뽑아 하나를 선택한 뒤 정상/불량 판정과 heatmap overlay를 확인할 수 있습니다.
-
-<!-- DEFECTVISION_RESULTS_END -->
-
+따라서 최종 배포 모델은 category별 PatchCore checkpoint를 사용하며, Streamlit 웹 페이지에서는 사용자가 category와 test 이미지를 선택하면 정상/불량 판정과 heatmap overlay 결과를 확인할 수 있도록 구현하였다.
