@@ -42,8 +42,7 @@
 10. [Streamlit 데모 및 AWS EC2 배포](#10-streamlit-데모-및-aws-ec2-배포)
 11. [코드 구조](#11-코드-구조)
 12. [프로젝트 한계와 개선 방향](#12-프로젝트-한계와-개선-방향)
-13. [PDF 제출 방법](#13-pdf-제출-방법)
-14. [참고 자료](#14-참고-자료)
+13. [참고 자료](#13-참고-자료)
 
 ---
 
@@ -96,7 +95,7 @@
 
 ### 2.2 최종 사용 category 선정 이유
 
-MVTec AD 전체 15개 category를 모두 학습할 경우 AutoEncoder 장기 학습과 PatchCore memory bank 생성 시간이 길어져 Colab 런타임 제한에 걸릴 가능성이 높았다. 따라서 대표적인 object/texture category가 섞이도록 다음 6개 category를 선택하였다.
+MVTec AD 전체 15개 category를 모두 학습할 경우 AutoEncoder 장기 학습과 PatchCore memory bank 생성 시간이 길어져 학습에 필요한 시간이 부족하였다. 대표적인 object/texture category가 섞이도록 다음 6개 category를 선택하였다.
 
 - `bottle`: 객체형 제품, 파손/오염 결함
 - `cable`: 선형 구조가 복잡한 객체형 제품
@@ -646,21 +645,7 @@ DefectVision-AD-Proj/
 
 ---
 
-## 13. PDF 제출 방법
-
-본 README는 GitHub에서 그대로 열어 PDF로 저장할 수 있도록 작성하였다.
-
-1. GitHub repository에서 `README.md` 페이지 열기
-2. 브라우저 메뉴 또는 단축키로 인쇄 실행
-   - Chrome: `Ctrl + P`
-   - macOS: `Cmd + P`
-3. 대상 프린터를 `PDF로 저장`으로 선택
-4. 배경 그래픽 옵션을 켜면 badge와 이미지가 더 잘 보인다.
-5. Mermaid diagram이 보이지 않는 경우 GitHub 렌더링이 완료된 뒤 다시 인쇄한다.
-
----
-
-## 14. 참고 자료
+## 13. 참고 자료
 
 - MVTec AD 공식 페이지: https://www.mvtec.com/research-teaching/datasets/mvtec-ad
 - PyTorch 공식 문서: https://pytorch.org/docs/stable/index.html
