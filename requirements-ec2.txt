@@ -1,0 +1,13 @@
+# EC2 deployment requirements for DefectVision-AD Streamlit app
+# Choose CPU PyTorch wheels unless you use a GPU EC2 instance.
+streamlit>=1.36
+numpy>=1.26,<2.1
+pandas>=2.2
+matplotlib>=3.8
+Pillow>=10.0
+opencv-python-headless>=4.9
+scikit-learn>=1.4
+PyYAML>=6.0
+tqdm>=4.66
+torch>=2.2
+torchvision>=0.17
